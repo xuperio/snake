@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake</title>
+  <style>
+    /* General Reset and Fullscreen Styles */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    /* Loading Screen Styles */
+    .loading-container {
+      text-align: center;
+    }
+
+    .loading-bar {
+      position: relative;
+      width: 80%;
+      height: 10px;
+      background-color: #444;
+      overflow: hidden;
+      border-radius: 5px;
+      margin: 20px auto;
+    }
+
+    .rainbow {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        red,
+        orange,
+        yellow,
+        green,
+        blue,
+        indigo,
+        violet
+      );
+      background-size: 300% 100%;
+      animation: rainbowMove 2s linear infinite;
+      transition: width 0.1s ease-out;
+    }
+
+    @keyframes rainbowMove {
+      0% {
+        background-position: 0% 0;
+      }
+      100% {
+        background-position: 100% 0;
+      }
+    }
+
+    .loading-text {
+      font-size: 20px;
+    }
+
+    /* Main Menu Styles */
+    .main-menu {
+      display: none; /* Hidden initially */
+      text-align: center;
+    }
+
+    .main-menu h1 {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .menu-button {
+      padding: 10px 20px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .menu-button:hover {
+      background-color: #555;
+    }
+
+    /* Credits Overlay */
+    .credits-overlay {
+      display: none; /* Hidden initially */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 10;
+    }
+
+    .credits-content {
+      color: white;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .close-credits {
+      padding: 10px 20px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .close-credits:hover {
+      background-color: #555;
+    }
+
+    /* Snake Game Styles */
+    #gameCanvas {
+      display: none;
+      background-color: black;
+      border: 1px solid #444;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="loading-container">
+    <div class="loading-bar">
+      <div class="rainbow"></div>
+    </div>
+    <div class="loading-text">Loading... <span id="percent">0%</span></div>
+  </div>
+
+  <!-- Main Menu -->
+  <div class="main-menu">
+    <h1>Welcome to Snake</h1>
+    <div class="menu-buttons">
+      <button class="menu-button" onclick="startGame()">Start</button>
+      <button class="menu-button" onclick="showCredits()">Credits</button>
+    </div>
+  </div>
+
+  <!-- Credits Overlay -->
+  <div class="credits-overlay" id="creditsOverlay">
+    <div class="credits-content">
+      <h2>Credits</h2>
+      <p>Game Developed by: xuperio/unlurking</p>
+      <p>Design Inspiration: DRAKEE</p>
+      <p>Music by: chill guy</p>
+    </div>
+    <button class="close-credits" onclick="closeCredits()">Close</button>
+  </div>
+
+  <!-- Background Music -->
+  <div id="youtubePlayer" style="display: none;"></div>
+
+  <!-- Snake Game Canvas -->
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+  <script>
+    // Load YouTube API for Music
+    let tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    let firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    let player;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtubePlayer', {
+        height: '0',
+        width: '0',
+        videoId: 'https://youtu.be/xtheUfhGtXk?si=eA8ZVwKjtfXijn6x', // Replace with YouTube Video ID
+        events: {
+          'onReady': onPlayerReady
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      // Player is ready
+    }
+
+    function playMusic() {
+      player.playVideo(); // Play YouTube Video Audio
+    }
+
+    function stopMusic() {
+      player.stopVideo(); // Stop YouTube Video
+    }
+
+    // Simulate loading progress
+    const rainbowBar = document.querySelector('.rainbow');
+    const percentText = document.getElementById('percent');
+    const loadingContainer = document.querySelector('.loading-container');
+    const mainMenu = document.querySelector('.main-menu');
+    const creditsOverlay = document.getElementById('creditsOverlay');
+
+    let progress = 0;
+
+    const loadInterval = setInterval(() => {
+      progress += 1; // Increment progress
+      rainbowBar.style.width = progress + '%'; // Update width of the rainbow bar
+      percentText.textContent = progress + '%'; // Update percentage text
+
+      if (progress >= 100) {
+        clearInterval(loadInterval); // Stop interval when loading is complete
+        showMainMenu(); // Transition to the main menu
+      }
+    }, 50);
+
+    // Function to display the main menu
+    function showMainMenu() {
+      loadingContainer.style.display = 'none'; // Hide the loading screen
+      mainMenu.style.display = 'flex'; // Show the main menu
+    }
+
+    // Function to show credits
+    function showCredits() {
+      creditsOverlay.style.display = 'flex'; // Show the credits overlay
+      playMusic(); // Play background music
+    }
+
+    // Function to close credits
+    function closeCredits() {
+      creditsOverlay.style.display = 'none'; // Hide the credits overlay
+      stopMusic(); // Stop background music
+    }
+
+    // Start the Snake Game
+    function startGame() {
+      mainMenu.style.display = 'none'; // Hide the main menu
+      const canvas = document.getElementById("gameCanvas");
+      canvas.style.display = "block"; // Show the canvas for the Snake game
+      const ctx = canvas.getContext("2d");
+
+      let snake, food, direction, gameInterval;
+
+      // Initialize the Snake game
+      function initGame() {
+        const boxSize = 20;
+        const rows = canvas.height / boxSize;
+        const cols = canvas.width / boxSize;
+
+        snake = [{ x: 5, y: 5 }];
+        food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+        direction = { x: 0, y: 0 };
+
+        document.addEventListener("keydown", changeDirection);
+
+        gameInterval = setInterval(() => {
+          updateGameState(ctx, boxSize, rows, cols);
+        }, 100);
+      }
+
+      // Change direction based on key pressed
+      function changeDirection(event) {
+        const key = event.keyCode;
+        if (key === 37 && direction.x !== 1) direction = { x: -1, y: 0 };
+        if (key === 38 && direction.y !== 1) direction = { x: 0, y: -1 };
+        if (key === 39 && direction.x !== -1) direction = { x: 1, y: 0 };
+        if (key === 40 && direction.y !== -1) direction = { x: 0, y: 1 };
+      }
+
+      // Update game state
+      function updateGameState(ctx, boxSize, rows, cols) {
+        const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+        if (
+          head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows ||
+          snake.some(segment => segment.x === head.x && segment.y === head.y)
+        ) {
+          endGame(ctx);
+          return;
+        }
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+          food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+        } else {
+          snake.pop();
+        }
+
+        renderGame(ctx, boxSize);
+      }
+
+      // Render game objects
+      function renderGame(ctx, boxSize) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = "red";
+        ctx.fillRect(food.x * boxSize, food.y * boxSize, boxSize, boxSize);
+
+        ctx.fillStyle = "lime";
+        snake.forEach(segment => {
+          ctx.fillRect(segment.x * boxSize, segment.y * boxSize, boxSize, boxSize);
+        });
+      }
+
+      // End the game
+      function endGame(ctx) {
+        clearInterval(gameInterval);
+        alert("Game Over!");
+        canvas.style.display = "none"; // Hide the canvas
+        showMainMenu(); // Show the main menu again
+      }
+
+      // Start the game logic
+      initGame();
+    }
+  </script>
+</body>
+</html>
